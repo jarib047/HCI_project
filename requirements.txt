@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+openai
+python-dotenv
+jinja2
+anyio
+filelock
+boto3
+python-dateutil
+aiohttp
