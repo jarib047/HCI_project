@@ -1,14 +1,14 @@
 # Gemini Chatbot with Delay Testing
 
-A FastAPI-based chatbot application for testing Gemini response delays. This application allows you to configure artificial delays for model responses and logs interactions to local CSV files.
+A FastAPI-based chatbot application for testing Gemini response delays. The app supports embedded use in Qualtrics via `postMessage`, local CSV logging, and a pricing-label manipulation tied to latency and condition.
 
 ## Features
 
 - Real-time streaming chat interface with Gemini
-- Configurable response delays for testing purposes
-- Participant tracking and question-based logging
+- Configurable latency conditions
+- Pricing-label display tied to latency and condition
+- Participant and question tracking
 - Local CSV logging for chat and client events
-- Client-side event logging
 - Combined CSV export of all participant logs
 
 ## Prerequisites
@@ -18,24 +18,14 @@ A FastAPI-based chatbot application for testing Gemini response delays. This app
 
 ## Installation
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd gpt-chatbot
-```
-
+1. Clone the repository.
 2. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Configure environment variables:
-   - Create a `.env` file
-   - Fill in your Gemini and download API keys
-
-## Configuration
-
-Create a `.env` file with the following variables:
+3. Create a `.env` file with:
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
@@ -51,53 +41,53 @@ DOWNLOAD_API_KEY=your_secure_api_key_here
 python -m uvicorn delay_C_Test:app --reload --port 8000
 ```
 
-### Production (using start.sh)
+### Production
 
 ```bash
-bash start.sh
+python -m uvicorn delay_C_Test:app --host 0.0.0.0 --port $PORT
 ```
-
-The application will start on the configured port (default: 8000 or $PORT environment variable).
 
 ## Usage
 
 ### Direct Access
-1. Open your browser and navigate to `http://localhost:8000`
-2. Enter your message and interact with the chatbot
-3. All interactions are automatically logged locally under `logs/`
+
+Open `http://localhost:8000`.
 
 ### Iframe Embedding (Qualtrics Integration)
 
-The application is designed to receive configuration via `postMessage` when embedded in an iframe (e.g., in Qualtrics surveys). The parent window should send a message with the following structure:
+The application is designed to receive configuration via `postMessage` when embedded in an iframe. The parent window should send a message with this structure:
 
 ```javascript
 iframe.contentWindow.postMessage({
-  pid: "participant_123",    // Participant ID
-  qid: "Q1",                 // Question ID
-  dcond: 1,                  // Delay condition: 1=2s, 2=9s, 3=20s
-  tcond: 1                   // Task condition: 1=CREATIVE, 2=ADVICE
+  pid: "participant_123",
+  qid: "Q1",
+  dcond: 1,
+  condition: "direct"
 }, "*");
 ```
 
-**Delay Condition Mapping:**
-- `dcond: 1` → 2.0 seconds delay
-- `dcond: 2` → 9.0 seconds delay
-- `dcond: 3` → 20.0 seconds delay
-- Default → 3.0 seconds delay
+**Delay Condition Mapping**
 
-**Task Condition Mapping:**
-- `tcond: 1` → "CREATIVE"
-- `tcond: 2` → "ADVICE"
-- Default → "unknown"
+- `dcond: 1` -> `2.0` seconds delay
+- `dcond: 2` -> `9.0` seconds delay
+- `dcond: 3` -> `20.0` seconds delay
+- Default -> `3.0` seconds delay
 
-**Note:** The application currently only supports configuration via postMessage, not URL parameters.
+**Pricing Condition Mapping**
+
+- `condition: "direct"` -> `Gemini - $8/month`, `Gemini - $20/month`, `Gemini - $250/month` for 2s, 9s, and 20s respectively
+- `condition: "alternate"` -> a pseudo-random Gemini price label from those three options
+- Default -> `"direct"`
+
+**Note:** The application currently reads embedded-study metadata from `postMessage`, not URL parameters.
 
 ## API Endpoints
 
 - `GET /` - Main chat interface
 - `POST /chat-stream` - Streaming chat endpoint
 - `POST /client-log` - Client-side event logging
-- `GET /download-all-logs?api_key=YOUR_KEY` - Download combined CSV of all participant logs (requires API key authentication)
+- `GET /download-log/{pid}` - Download one participant chat log
+- `GET /download-all-logs?api_key=YOUR_KEY` - Download the combined chat logs
 
 ## Data Storage
 
@@ -107,18 +97,11 @@ iframe.contentWindow.postMessage({
 
 ## Project Structure
 
+```text
+delay_C_Test.py
+requirements.txt
+start.sh
+static/
+templates/
+logs/
 ```
-├── delay_C_Test.py      # Main FastAPI application
-├── requirements.txt      # Python dependencies
-├── start.sh             # Production startup script
-├── static/              # Frontend assets
-│   ├── main.js         # JavaScript logic
-│   └── style.css       # Styles
-├── templates/           # HTML templates
-│   └── index.html
-└── logs/               # Local log storage (fallback)
-```
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.

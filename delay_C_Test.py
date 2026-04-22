@@ -65,11 +65,11 @@ CHAT_HEADER = [
     "ParticipantID",
     "QuestionID",
     "DelayCondition",
+    "Condition",
     "PromptText",
     "GeminiReply",
     "ActualLatency",
     "LatencyExceeded",
-    "TaskCondition",
 ]
 
 CLIENT_HEADER = [
@@ -77,7 +77,7 @@ CLIENT_HEADER = [
     "ParticipantID",
     "QuestionID",
     "DelayCondition",
-    "TaskCondition",
+    "Condition",
     "EventType",
     "EventTarget",
     "Content",
@@ -97,7 +97,7 @@ class ChatRequest(BaseModel):
     delay: float = 1.0
     pid: str = "unknown"
     qid: str = "unspecified"
-    task_condition: str = "unknown"
+    condition: str = "direct"
     start_time_s: float = 0.0
 
 
@@ -106,7 +106,7 @@ class ClientLogRequest(BaseModel):
     pid: str
     qid: str
     delay_condition: float
-    task_condition: str
+    condition: str = "direct"
     type: str
     target: str = ""
     content: str = ""
@@ -215,7 +215,7 @@ async def log_chat_interaction(
     delay_condition: float,
     pid: str,
     question: str,
-    task_condition: str,
+    condition: str,
 ):
     latency_exceeded = "Yes" if model_time > delay_condition else "No"
     row = [
@@ -223,11 +223,11 @@ async def log_chat_interaction(
         safe_csv_field(str(pid)),
         safe_csv_field(str(question)),
         delay_condition,
+        safe_csv_field(condition),
         safe_csv_field(message),
         safe_csv_field(reply),
         round(model_time, 3),
         latency_exceeded,
-        safe_csv_field(task_condition),
     ]
     await append_to_chat_csv(row, pid)
 
@@ -259,7 +259,7 @@ async def handle_client_log(log: ClientLogRequest):
             safe_csv_field(str(log.pid)),
             safe_csv_field(str(log.qid)),
             log.delay_condition,
-            safe_csv_field(str(log.task_condition)),
+            safe_csv_field(str(log.condition)),
             safe_csv_field(str(log.type)),
             safe_csv_field(str(log.target)),
             safe_csv_field(str(log.content)),
@@ -331,7 +331,7 @@ async def chat_stream(request: ChatRequest):
                     delay_condition=request.delay,
                     pid=request.pid,
                     question=request.qid,
-                    task_condition=request.task_condition,
+                    condition=request.condition,
                 )
 
             yield (
@@ -384,7 +384,7 @@ async def chat(request: ChatRequest):
             delay_condition=request.delay,
             pid=request.pid,
             question=request.qid,
-            task_condition=request.task_condition,
+            condition=request.condition,
         )
 
         return {

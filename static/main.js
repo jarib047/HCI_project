@@ -20,7 +20,42 @@ const urlParams = new URLSearchParams(window.location.search);
 var participantID = "unknown";
 var questionID = "unknown";
 var delay_s = 3.0;
-var task_condition = "unknown";
+var condition = "direct";
+var displayedPlanLabel = "GenAI";
+
+const DIRECT_PLAN_BY_DCOND = {
+  1: "GenAI - $8/month",
+  2: "GenAI - $20/month",
+  3: "GenAI - $250/month"
+};
+
+const ALL_PLAN_LABELS = Object.values(DIRECT_PLAN_BY_DCOND);
+
+function stableIndexFromText(text, modulo) {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % modulo;
+}
+
+function getDisplayedPlanLabel(dcond, currentCondition) {
+  if (currentCondition === "alternate") {
+    const seed = `${participantID}|${questionID}|${dcond}|${currentCondition}`;
+    return ALL_PLAN_LABELS[stableIndexFromText(seed, ALL_PLAN_LABELS.length)];
+  }
+
+  return DIRECT_PLAN_BY_DCOND[dcond] || "GenAI";
+}
+
+function updateChatBranding(dcond) {
+  displayedPlanLabel = getDisplayedPlanLabel(dcond, condition);
+  const titleEl = document.getElementById("chat-title");
+  if (titleEl) {
+    titleEl.textContent = displayedPlanLabel;
+  }
+  document.title = displayedPlanLabel;
+}
 
 // Store conversation history and state
 let conversationHistory = [];
@@ -39,7 +74,7 @@ function logNewEvent(type, identifier, content, latencyFT, latencyLT) {
       pid: participantID,
       qid: questionID,
       delay_condition: delay_s,
-      task_condition: task_condition,
+      condition: condition,
       type: type,
       target: identifier,
       content: payload,
@@ -55,7 +90,7 @@ function logNewEvent(type, identifier, content, latencyFT, latencyLT) {
     }).catch(err => console.error('Failed to send log', err));
 
     // Still print to console for debugging
-    console.log(`${timestamp} PID: ${participantID}, QID: ${questionID}, DELAY_CONDITION: ${delay_s}, TASK_CONDITION: ${task_condition}, type: ${type}, target: ${identifier}, content: "${payload}", latencyFT: ${latencyFT_s}, latencyLT: ${latencyLT_s}`);
+    console.log(`${timestamp} PID: ${participantID}, QID: ${questionID}, DELAY_CONDITION: ${delay_s}, CONDITION: ${condition}, PLAN: ${displayedPlanLabel}, type: ${type}, target: ${identifier}, content: "${payload}", latencyFT: ${latencyFT_s}, latencyLT: ${latencyLT_s}`);
  }
 
 function restartConversation() {
@@ -104,19 +139,20 @@ window.addEventListener('message', function(event) {
   console.log("PID:", event.data.pid);
   console.log("QID:", event.data.qid);
   console.log("DCOND:", event.data.dcond, "Type:", typeof event.data.dcond);
-  console.log("TCOND:", event.data.tcond, "Type:", typeof event.data.tcond);
+  console.log("CONDITION:", event.data.condition ?? event.data.cond);
 
   // Store the message with type checks
   participantID = event.data.pid || "unknown";
   questionID = event.data.qid || "unknown";
   let dcond = parseInt(event.data.dcond) || 0;  // Convert to number, default to 0 if NaN
-  let tcond = parseInt(event.data.tcond) || 0;  // Convert to number, default to 0 if NaN
+  const incomingCondition = (event.data.condition || event.data.cond || "direct").toString().toLowerCase();
+  condition = incomingCondition === "alternate" ? "alternate" : "direct";
 
   // Log the values after assignment
   console.log("After assignment - PID:", participantID);
   console.log("After assignment - QID:", questionID);
   console.log("After assignment - DCOND:", dcond);
-  console.log("After assignment - TCOND:", tcond);
+  console.log("After assignment - CONDITION:", condition);
 
   switch (dcond) {
     case 1:
@@ -133,17 +169,7 @@ window.addEventListener('message', function(event) {
       break;
   }
 
-  switch (tcond) {
-    case 1:
-      task_condition = "CREATIVE";
-      break;
-    case 2:
-      task_condition = "ADVICE";
-      break;
-    default:
-      task_condition = "unknown";
-      break;
-  }
+  updateChatBranding(dcond);
 
 });
 
@@ -282,7 +308,7 @@ async function saveEdit(saveButton, messageIndex) {
         delay: delay_s,
         pid: participantID,
         qid: questionID,
-        task_condition: task_condition,
+        condition: condition,
         start_time_s: timestampStart
       },
       // onChunk - handle each piece of content
@@ -653,7 +679,7 @@ async function regenerateResponse(messageIndex, triggerBtn = null) {
         delay: delay_s,
         pid: participantID,
         qid: questionID,
-        task_condition: task_condition,
+        condition: condition,
         start_time_s: timestampStart
       },
       // onChunk - handle each piece of content
@@ -831,7 +857,8 @@ async function sendMessage() {
   console.log("Delay:", delay_s);
   console.log("PID:", participantID);
   console.log("QID:", questionID);
-  console.log("Task condition:", task_condition);
+  console.log("Condition:", condition);
+  console.log("Displayed plan:", displayedPlanLabel);
 
   // Remove typing indicator and add streaming response container
   const typingIndicator = document.getElementById("typing-indicator");
@@ -871,7 +898,7 @@ async function sendMessage() {
         delay: delay_s,
         pid: participantID,
         qid: questionID,
-        task_condition: task_condition,
+        condition: condition,
         start_time_s: timestampStart
       },
       // onChunk - handle each piece of content
