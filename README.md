@@ -1,21 +1,20 @@
-# GPT Chatbot with Delay Testing
+# Gemini Chatbot with Delay Testing
 
-A FastAPI-based chatbot application for testing GPT response delays. This application allows you to configure artificial delays for GPT responses and logs interactions to AWS S3.
+A FastAPI-based chatbot application for testing Gemini response delays. This application allows you to configure artificial delays for model responses and logs interactions to local CSV files.
 
 ## Features
 
-- Real-time streaming chat interface with GPT-4
+- Real-time streaming chat interface with Gemini
 - Configurable response delays for testing purposes
 - Participant tracking and question-based logging
-- AWS S3 integration for data persistence
+- Local CSV logging for chat and client events
 - Client-side event logging
 - Combined CSV export of all participant logs
 
 ## Prerequisites
 
-- Python 3.8+
-- OpenAI API key
-- AWS S3 bucket and credentials
+- Python 3.9+
+- Gemini API key
 
 ## Installation
 
@@ -31,19 +30,16 @@ pip install -r requirements.txt
 ```
 
 3. Configure environment variables:
-   - Copy `.env.example` to `.env`
-   - Fill in your API keys and AWS credentials
+   - Create a `.env` file
+   - Fill in your Gemini and download API keys
 
 ## Configuration
 
 Create a `.env` file with the following variables:
 
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
-AWS_ACCESS_KEY_ID=your_aws_access_key_id
-AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-AWS_REGION=us-east-1
-AWS_S3_BUCKET_NAME=your_s3_bucket_name
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.5-flash
 DOWNLOAD_API_KEY=your_secure_api_key_here
 ```
 
@@ -68,7 +64,7 @@ The application will start on the configured port (default: 8000 or $PORT enviro
 ### Direct Access
 1. Open your browser and navigate to `http://localhost:8000`
 2. Enter your message and interact with the chatbot
-3. All interactions are automatically logged to S3
+3. All interactions are automatically logged locally under `logs/`
 
 ### Iframe Embedding (Qualtrics Integration)
 
@@ -105,8 +101,9 @@ iframe.contentWindow.postMessage({
 
 ## Data Storage
 
-- Chat interactions are stored in S3 under `client_logs/participant_{pid}.csv`
-- Local fallback logs are stored in `logs/` directory (or `/tmp/chat_logs` on Render)
+- Chat interactions are stored in `logs/chat/participant_{pid}.csv`
+- Client events are stored in `logs/client/participant_{pid}.csv`
+- On Render, logs are stored under `/tmp/chat_logs`
 
 ## Project Structure
 
